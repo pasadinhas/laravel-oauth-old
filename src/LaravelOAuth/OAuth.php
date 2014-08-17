@@ -9,6 +9,8 @@ namespace LaravelOAuth;
 
 use Config;
 use LaravelOAuth\Decorators\AbstractServiceDecorator;
+use LaravelOAuth\Exceptions\HttpClientClassDoesNotExistException;
+use LaravelOAuth\Exceptions\StorageClassDoesNotExistException;
 use OAuth\Common\Consumer\Credentials;
 use OAuth\Common\Service\ServiceInterface;
 use OAuth\Common\Storage\TokenStorageInterface;
@@ -97,14 +99,17 @@ class OAuth
      *
      * @param string $storageName
      *
+     * @throws Exceptions\StorageClassDoesNotExistException
      * @return TokenStorageInterface
      */
     public function createStorageInstance($storageName)
     {
         $storageClass = "\\OAuth\\Common\\Storage\\$storageName";
-        $storage      = new $storageClass();
 
-        return $storage;
+        if ( ! class_exists($storageClass))
+            throw new StorageClassDoesNotExistException();
+
+        return new $storageClass();
     }
 
     /**
@@ -112,11 +117,16 @@ class OAuth
      *
      * @param string $httpClientName
      *
+     * @throws Exceptions\HttpClientClassDoesNotExistException
      * @return void
      */
     public function setHttpClient($httpClientName)
     {
         $httpClientClass = "\\OAuth\\Common\\Http\\Client\\$httpClientName";
+
+        if ( ! class_exists($httpClientClass))
+            throw new HttpClientClassDoesNotExistException;
+
         $this->_serviceFactory->setHttpClient(new $httpClientClass());
     }
 
@@ -161,15 +171,24 @@ class OAuth
     private function getDecoratorClassNameForService(ServiceInterface $service, $name)
     {
         $version = $service->getOAuthVersion();
-        $oauth   = "OAuth{$version}"; // will be "OAuth1" or "OAuth2"
 
-        // We will check if there is a dedicated decorator for this service
-        $class = "LaravelOAuth\\Decorators\\{$oauth}\\{$name}Decorator";
+        $class = $this->getDedicatedDecoratorClassNameForService($name, $version);
 
         if (class_exists($class)) {
             return $class;
         } else {
-            return "LaravelOAuth\\Decorators\\{$oauth}\\BaseServiceDecorator";
+            return "LaravelOAuth\\Decorators\\OAuth{$version}\\BaseServiceDecorator";
         }
+    }
+
+    /**
+     * @param $name
+     * @param $version
+     *
+     * @return string
+     */
+    private function getDedicatedDecoratorClassNameForService($name, $version)
+    {
+        return "LaravelOAuth\\Decorators\\OAuth{$version}\\{$name}Decorator";
     }
 }

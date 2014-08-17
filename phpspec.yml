@@ -1,0 +1,6 @@
+suites:
+  laravel_oauth_suite:
+    namespace: LaravelOAuth
+    src_path: src
+    spec_path: tests
+    spec_prefix: spec
