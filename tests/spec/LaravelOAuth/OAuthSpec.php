@@ -67,16 +67,5 @@ class OAuthSpec extends ObjectBehavior
         $this->shouldThrow('LaravelOAuth\\Exceptions\\HttpClientClassDoesNotExistException')
             ->duringSetHttpClient('Foobar');
     }
-
-    /*
-     * This method is not visible
-    function it_generates_correct_dedicated_decorator_class_names()
-    {
-        $this->getDedicatedDecoratorClassNameForService('Foobar', 1)
-            ->shouldReturn('LaravelOAuth\\Decorators\\OAuth1\\FoobarDecorator');
-
-        $this->getDedicatedDecoratorClassNameForService('Foobar', 2)
-            ->shouldReturn('LaravelOAuth\\Decorators\\OAuth2\\FoobarDecorator');
-    }
-    */
+    
 }
