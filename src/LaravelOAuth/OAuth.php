@@ -7,7 +7,8 @@
 
 namespace LaravelOAuth;
 
-use Config;
+use Illuminate\Config\Repository as Configuration;
+use Illuminate\Routing\UrlGenerator as URL;
 use LaravelOAuth\Decorators\AbstractServiceDecorator;
 use LaravelOAuth\Exceptions\HttpClientClassDoesNotExistException;
 use LaravelOAuth\Exceptions\StorageClassDoesNotExistException;
@@ -15,7 +16,6 @@ use OAuth\Common\Consumer\Credentials;
 use OAuth\Common\Service\ServiceInterface;
 use OAuth\Common\Storage\TokenStorageInterface;
 use OAuth\ServiceFactory;
-use URL;
 
 class OAuth
 {
@@ -53,19 +53,31 @@ class OAuth
      * @var boolean
      */
     private $_refresh;
+    /**
+     * @var \Illuminate\Config\Repository
+     */
+    private $config;
+    /**
+     * @var \Illuminate\Routing\UrlGenerator
+     */
+    private $url;
 
     /**
      * Constructor
      *
-     * @param ServiceFactory $serviceFactory - (Dependency injection) If not provided, a ServiceFactory instance will be constructed.
+     * @param \Illuminate\Config\Repository    $config
+     * @param \Illuminate\Routing\UrlGenerator $url
+     * @param ServiceFactory                   $serviceFactory - (Dependency injection) If not provided, a ServiceFactory instance will be constructed.
      */
-    public function __construct(ServiceFactory $serviceFactory = null)
+    public function __construct(Configuration $config, URL $url, ServiceFactory $serviceFactory = null)
     {
         if (null === $serviceFactory) {
             // Create the service factory
             $serviceFactory = new ServiceFactory();
         }
         $this->_serviceFactory = $serviceFactory;
+        $this->config = $config;
+        $this->url = $url;
     }
 
     /**
@@ -76,21 +88,21 @@ class OAuth
     public function setConfig($service)
     {
         // if config/laravel-oauth.php exists use this one
-        if (Config::get('laravel-oauth.consumers') != null) {
-            $this->_storage_name  = Config::get('laravel-oauth.storage', 'Session');
-            $this->_client_id     = Config::get("laravel-oauth.consumers.$service.client_id");
-            $this->_client_secret = Config::get("laravel-oauth.consumers.$service.client_secret");
-            $this->_scope         = Config::get("laravel-oauth.consumers.$service.scope", array());
-            $this->_url           = Config::get("laravel-oauth.consumers.$service.redirect_url", null);
-            $this->_refresh       = Config::get("laravel-oauth.consumers.$service.automatic_refresh", false);
+        if ($this->config->get('laravel-oauth.consumers') != null) {
+            $this->_storage_name  = $this->config->get('laravel-oauth.storage', 'Session');
+            $this->_client_id     = $this->config->get("laravel-oauth.consumers.$service.client_id");
+            $this->_client_secret = $this->config->get("laravel-oauth.consumers.$service.client_secret");
+            $this->_scope         = $this->config->get("laravel-oauth.consumers.$service.scope", array());
+            $this->_url           = $this->config->get("laravel-oauth.consumers.$service.redirect_url", null);
+            $this->_refresh       = $this->config->get("laravel-oauth.consumers.$service.automatic_refresh", false);
             // else try to find config in packages configs
         } else {
-            $this->_storage_name  = Config::get('laravel-oauth::storage', 'Session');
-            $this->_client_id     = Config::get("laravel-oauth::consumers.$service.client_id");
-            $this->_client_secret = Config::get("laravel-oauth::consumers.$service.client_secret");
-            $this->_scope         = Config::get("laravel-oauth::consumers.$service.scope", array());
-            $this->_url           = Config::get("laravel-oauth::consumers.$service.redirect_url", null);
-            $this->_refresh       = Config::get("laravel-oauth::consumers.$service.automatic_refresh", false);
+            $this->_storage_name  = $this->config->get('laravel-oauth::storage', 'Session');
+            $this->_client_id     = $this->config->get("laravel-oauth::consumers.$service.client_id");
+            $this->_client_secret = $this->config->get("laravel-oauth::consumers.$service.client_secret");
+            $this->_scope         = $this->config->get("laravel-oauth::consumers.$service.scope", array());
+            $this->_url           = $this->config->get("laravel-oauth::consumers.$service.redirect_url", null);
+            $this->_refresh       = $this->config->get("laravel-oauth::consumers.$service.automatic_refresh", false);
         }
     }
 
@@ -148,7 +160,7 @@ class OAuth
         $storage = $this->createStorageInstance($this->_storage_name);
 
         // create credentials object
-        $credentials = new Credentials($this->_client_id, $this->_client_secret, $url ? : $this->_url ? : URL::current());
+        $credentials = new Credentials($this->_client_id, $this->_client_secret, $url ? : $this->_url ? : $this->url->current());
 
         // check if scopes were provided
         if (is_null($scope)) {

@@ -30,11 +30,10 @@ class OAuthServiceProvider extends ServiceProvider {
     {
         // Register 'oauth'
         $this->app['oauth'] = $this->app->share(function ($app) {
-            // create oAuth instance
-            $oauth = new OAuth();
-
-            // return oAuth instance
-            return $oauth;
+            return new OAuth(
+                $this->app['config'],
+                $this->app['url']
+            );
         });
     }
 
