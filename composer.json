@@ -14,7 +14,7 @@
     ],
     "require": {
         "php": ">=5.3",
-        "pasadinhas/oauth": "~1.0.0"
+        "pasadinhas/oauth": "~1.0.1"
     },
     "require-dev": {
         "illuminate/support": "~4",
