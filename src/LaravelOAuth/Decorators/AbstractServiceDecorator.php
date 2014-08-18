@@ -24,6 +24,7 @@ abstract class AbstractServiceDecorator implements ServiceInterface
     {
         $this->service = $service;
         $this->refresh = $refresh;
+        $this->bootstrap();
     }
 
     /**
@@ -71,5 +72,39 @@ abstract class AbstractServiceDecorator implements ServiceInterface
     public function getAccessTokenEndpoint()
     {
         return $this->service->getAccessTokenEndpoint();
+    }
+
+    /**
+     * Returns the OAuth API version of the Service. (1 or 2)
+     *
+     * @return integer
+     */
+    public function getOAuthVersion()
+    {
+        return $this->service->getOAuthVersion();
+    }
+
+    /**
+     * Alias to perform a request and json decode the result.
+     *
+     * @param        $path
+     * @param string $method
+     * @param null   $body
+     * @param array  $extraHeaders
+     *
+     * @return mixed
+     */
+    public function requestJSON($path, $method = 'GET', $body = null, array $extraHeaders = [])
+    {
+        return json_decode($this->request($path, $method, $body, $extraHeaders));
+    }
+
+    /**
+     * Give the developer a chance to bootstrap their custom decorators without
+     * the need of overriding the constructor.
+     */
+    protected function bootstrap()
+    {
+
     }
 }

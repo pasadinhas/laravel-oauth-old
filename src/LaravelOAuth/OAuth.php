@@ -7,8 +7,8 @@
 
 namespace LaravelOAuth;
 
-use Illuminate\Config\Repository as Configuration;
-use Illuminate\Routing\UrlGenerator as URL;
+use Illuminate\Config\Repository;
+use Illuminate\Routing\UrlGenerator;
 use LaravelOAuth\Decorators\AbstractServiceDecorator;
 use LaravelOAuth\Exceptions\HttpClientClassDoesNotExistException;
 use LaravelOAuth\Exceptions\StorageClassDoesNotExistException;
@@ -22,7 +22,7 @@ class OAuth
     /**
      * @var ServiceFactory
      */
-    private $_serviceFactory;
+    private $serviceFactory;
     /**
      * Storage name from config
      * @var string
@@ -65,19 +65,15 @@ class OAuth
     /**
      * Constructor
      *
-     * @param \Illuminate\Config\Repository    $config
-     * @param \Illuminate\Routing\UrlGenerator $url
-     * @param ServiceFactory                   $serviceFactory - (Dependency injection) If not provided, a ServiceFactory instance will be constructed.
+     * @param ServiceFactory $serviceFactory
+     * @param Repository     $config
+     * @param UrlGenerator   $url
      */
-    public function __construct(Configuration $config, URL $url, ServiceFactory $serviceFactory = null)
+    public function __construct(ServiceFactory $serviceFactory, Repository $config, UrlGenerator $url)
     {
-        if (null === $serviceFactory) {
-            // Create the service factory
-            $serviceFactory = new ServiceFactory();
-        }
-        $this->_serviceFactory = $serviceFactory;
-        $this->config = $config;
-        $this->url = $url;
+        $this->serviceFactory = $serviceFactory;
+        $this->config          = $config;
+        $this->url             = $url;
     }
 
     /**
@@ -88,7 +84,7 @@ class OAuth
     public function setConfig($service)
     {
         // if config/laravel-oauth.php exists use this one
-        if ($this->config->get('laravel-oauth.consumers') != null) {
+        if ($this->config->has('laravel-oauth.consumers') != null) {
             $this->_storage_name  = $this->config->get('laravel-oauth.storage', 'Session');
             $this->_client_id     = $this->config->get("laravel-oauth.consumers.$service.client_id");
             $this->_client_secret = $this->config->get("laravel-oauth.consumers.$service.client_secret");
@@ -97,7 +93,8 @@ class OAuth
             $this->_refresh       = $this->config->get("laravel-oauth.consumers.$service.automatic_refresh", false);
             // else try to find config in packages configs
         } else {
-            $this->_storage_name  = $this->config->get('laravel-oauth::storage', 'Session');
+            $this->_storage_name = $this->config->get('laravel-oauth::storage', 'Session');
+            dd($this->_storage_name);
             $this->_client_id     = $this->config->get("laravel-oauth::consumers.$service.client_id");
             $this->_client_secret = $this->config->get("laravel-oauth::consumers.$service.client_secret");
             $this->_scope         = $this->config->get("laravel-oauth::consumers.$service.scope", array());
@@ -118,10 +115,20 @@ class OAuth
     {
         $storageClass = "\\OAuth\\Common\\Storage\\$storageName";
 
-        if ( ! class_exists($storageClass))
-            throw new StorageClassDoesNotExistException();
+        if (!class_exists($storageClass)) throw new StorageClassDoesNotExistException();
 
         return new $storageClass();
+    }
+
+    /**
+     * @param $url
+     *
+     * @return Credentials
+     */
+    private function createCredentialsInstance($url)
+    {
+        $url = $url ?: $this->_url ?: $this->url->current();
+        return new Credentials($this->_client_id, $this->_client_secret, $url);
     }
 
     /**
@@ -136,10 +143,9 @@ class OAuth
     {
         $httpClientClass = "\\OAuth\\Common\\Http\\Client\\$httpClientName";
 
-        if ( ! class_exists($httpClientClass))
-            throw new HttpClientClassDoesNotExistException;
+        if (!class_exists($httpClientClass)) throw new HttpClientClassDoesNotExistException;
 
-        $this->_serviceFactory->setHttpClient(new $httpClientClass());
+        $this->serviceFactory->setHttpClient(new $httpClientClass());
     }
 
     /**
@@ -153,25 +159,42 @@ class OAuth
      */
     public function consumer($serviceName, $url = null, $scope = null, AbstractServiceDecorator $decorator = null)
     {
-        // get config
         $this->setConfig($serviceName);
 
-        // get storage object
-        $storage = $this->createStorageInstance($this->_storage_name);
-
-        // create credentials object
-        $credentials = new Credentials($this->_client_id, $this->_client_secret, $url ? : $this->_url ? : $this->url->current());
-
-        // check if scopes were provided
-        if (is_null($scope)) {
-            // get scope from config (default to empty array)
-            $scope = $this->_scope;
-        }
-
-        // return the service consumer object
-        $service = $this->_serviceFactory->createService($serviceName, $credentials, $storage, $scope);
+        $service = $this->createService($serviceName, $url, $scope);
 
         return $this->decorateService($service, $serviceName, $decorator);
+    }
+
+    /**
+     * @param $serviceName
+     * @param $url
+     * @param $scope
+     *
+     * @return ServiceInterface
+     */
+    private function createService($serviceName, $url, $scope)
+    {
+        list($storage, $credentials, $scope) = $this->createServiceDependencies($url, $scope);
+
+        return $this->serviceFactory->createService($serviceName, $credentials, $storage, $scope);
+    }
+
+    /**
+     * @param $url
+     * @param $scope
+     *
+     * @return array
+     */
+    private function createServiceDependencies($url, $scope)
+    {
+        $storage = $this->createStorageInstance($this->_storage_name);
+
+        $credentials = $this->createCredentialsInstance($url);
+
+        $scope = $scope ? : $this->_scope;
+
+        return array($storage, $credentials, $scope);
     }
 
     private function decorateService(ServiceInterface $service, $serviceName, AbstractServiceDecorator $decorator = null)

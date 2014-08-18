@@ -1,6 +1,7 @@
 <?php namespace LaravelOAuth;
 
 use Illuminate\Support\ServiceProvider;
+use OAuth\ServiceFactory;
 
 class OAuthServiceProvider extends ServiceProvider {
 
@@ -31,6 +32,7 @@ class OAuthServiceProvider extends ServiceProvider {
         // Register 'oauth'
         $this->app['oauth'] = $this->app->share(function ($app) {
             return new OAuth(
+                new ServiceFactory(),
                 $this->app['config'],
                 $this->app['url']
             );
