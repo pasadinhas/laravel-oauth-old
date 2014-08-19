@@ -94,7 +94,6 @@ class OAuth
             // else try to find config in packages configs
         } else {
             $this->_storage_name = $this->config->get('laravel-oauth::storage', 'Session');
-            dd($this->_storage_name);
             $this->_client_id     = $this->config->get("laravel-oauth::consumers.$service.client_id");
             $this->_client_secret = $this->config->get("laravel-oauth::consumers.$service.client_secret");
             $this->_scope         = $this->config->get("laravel-oauth::consumers.$service.scope", array());
