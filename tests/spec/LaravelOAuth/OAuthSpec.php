@@ -81,6 +81,16 @@ class OAuthSpec extends ObjectBehavior
         $foo->shouldHaveType('LaravelOAuth\\Decorators\\AbstractServiceDecorator');
     }
 
+    function it_decorates_with_dedicated_decorator_if_one_is_available(Repository $config)
+    {
+        $this->setupConfigurationExpectations($config);
+        $fenix = $this->consumer('FenixEdu');
+        $fenix->shouldHaveType('OAuth\\Common\\Service\\ServiceInterface');
+        $fenix->shouldHaveType('LaravelOAuth\\Decorators\\AbstractServiceDecorator');
+        $fenix->shouldHaveType('LaravelOAuth\\Decorators\\OAuth2\\BaseServiceDecorator');
+        $fenix->shouldHaveType('LaravelOAuth\\Decorators\\OAuth2\\FenixEduDecorator');
+    }
+
     function setupConfigurationExpectations(Repository $config, $service = 'Foo', array $override = [])
     {
         /*
