@@ -9,7 +9,9 @@ namespace LaravelOAuth;
 
 use Illuminate\Config\Repository;
 use Illuminate\Routing\UrlGenerator;
+use LaravelOAuth\Decorators\AbsractServiceDecorator;
 use LaravelOAuth\Decorators\AbstractServiceDecorator;
+use LaravelOAuth\Decorators\Exceptions\DecoratorClassDoesNotExistException;
 use LaravelOAuth\Exceptions\HttpClientClassDoesNotExistException;
 use LaravelOAuth\Exceptions\StorageClassDoesNotExistException;
 use OAuth\Common\Consumer\Credentials;
@@ -81,25 +83,22 @@ class OAuth
      *
      * @param string $service
      */
-    public function setConfig($service)
+    public function loadConfiguration($service)
     {
-        // if config/laravel-oauth.php exists use this one
-        if ($this->config->has('laravel-oauth.consumers') != null) {
-            $this->_storage_name  = $this->config->get('laravel-oauth.storage', 'Session');
-            $this->_client_id     = $this->config->get("laravel-oauth.consumers.$service.client_id");
-            $this->_client_secret = $this->config->get("laravel-oauth.consumers.$service.client_secret");
-            $this->_scope         = $this->config->get("laravel-oauth.consumers.$service.scope", array());
-            $this->_url           = $this->config->get("laravel-oauth.consumers.$service.redirect_url", null);
-            $this->_refresh       = $this->config->get("laravel-oauth.consumers.$service.automatic_refresh", false);
-            // else try to find config in packages configs
-        } else {
-            $this->_storage_name = $this->config->get('laravel-oauth::storage', 'Session');
-            $this->_client_id     = $this->config->get("laravel-oauth::consumers.$service.client_id");
-            $this->_client_secret = $this->config->get("laravel-oauth::consumers.$service.client_secret");
-            $this->_scope         = $this->config->get("laravel-oauth::consumers.$service.scope", array());
-            $this->_url           = $this->config->get("laravel-oauth::consumers.$service.redirect_url", null);
-            $this->_refresh       = $this->config->get("laravel-oauth::consumers.$service.automatic_refresh", false);
+        if ($this->config->has('laravel-oauth.consumers')) {
+            $prefix = 'laravel-oauth.';
         }
+        else
+        {
+            $prefix = 'laravel-oauth::';
+        }
+
+        $this->_storage_name  = $this->config->get("{$prefix}storage", 'Session');
+        $this->_client_id     = $this->config->get("{$prefix}consumers.$service.client_id");
+        $this->_client_secret = $this->config->get("{$prefix}consumers.$service.client_secret");
+        $this->_scope         = $this->config->get("{$prefix}consumers.$service.scope", array());
+        $this->_url           = $this->config->get("{$prefix}consumers.$service.redirect_url", null);
+        $this->_refresh       = $this->config->get("{$prefix}consumers.$service.automatic_refresh", false);
     }
 
     /**
@@ -148,21 +147,21 @@ class OAuth
     }
 
     /**
-     * @param  string                             $serviceName
-     * @param  string                             $url
-     * @param  array                              $scope
+     * @param  string $serviceName
+     * @param  string $url
+     * @param  array  $scope
      *
-     * @param Decorators\AbstractServiceDecorator $decorator
+     * @param null    $decorator
      *
      * @return AbstractServiceDecorator
      */
-    public function consumer($serviceName, $url = null, $scope = null, AbstractServiceDecorator $decorator = null)
+    public function make($serviceName, $url = null, $scope = null, $decorator = null)
     {
-        $this->setConfig($serviceName);
+        $this->loadConfiguration($serviceName);
 
         $service = $this->createService($serviceName, $url, $scope);
 
-        return $this->decorateService($service, $serviceName, $decorator);
+        return $this->decorateService($service, $decorator);
     }
 
     /**
@@ -196,33 +195,43 @@ class OAuth
         return array($storage, $credentials, $scope);
     }
 
-    private function decorateService(ServiceInterface $service, $serviceName, AbstractServiceDecorator $decorator = null)
+    /**
+     * @param ServiceInterface $service
+     * @param                  $decorator
+     *
+     * @throws DecoratorClassDoesNotExistException
+     * @return AbsractServiceDecorator
+     */
+    private function decorateService(ServiceInterface $service, $decorator)
     {
-        $class = $decorator ? : $this->getDecoratorClassNameForService($service, $serviceName);
+        if (!empty($decorator))
+        {
+            if (!class_exists($decorator))
+                throw new DecoratorClassDoesNotExistException("Decorator Class [$decorator] does not exist.");
+
+            $class = $decorator;
+        }
+        else
+        {
+            $class = $this->getDecoratorClassNameForService($service);
+        }
+
         return new $class($service, $this->_refresh);
     }
 
-    private function getDecoratorClassNameForService(ServiceInterface $service, $name)
+    private function getDecoratorClassNameForService(ServiceInterface $service)
     {
         $version = $service->getOAuthVersion();
+        $name = $service->service();
 
-        $class = $this->getDedicatedDecoratorClassNameForService($name, $version);
+        $class = "LaravelOAuth\\Decorators\\OAuth{$version}\\{$name}Decorator";
 
-        if (class_exists($class)) {
+        if (class_exists($class))
+        {
             return $class;
-        } else {
-            return "LaravelOAuth\\Decorators\\OAuth{$version}\\BaseServiceDecorator";
         }
+
+        return "LaravelOAuth\\Decorators\\OAuth{$version}\\BaseServiceDecorator";
     }
 
-    /**
-     * @param $name
-     * @param $version
-     *
-     * @return string
-     */
-    private function getDedicatedDecoratorClassNameForService($name, $version)
-    {
-        return "LaravelOAuth\\Decorators\\OAuth{$version}\\{$name}Decorator";
-    }
 }

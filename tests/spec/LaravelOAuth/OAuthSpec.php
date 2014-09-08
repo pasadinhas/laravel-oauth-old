@@ -1,6 +1,6 @@
 <?php
 
-namespace spec\LaravelOAuth;
+namespace spec\LaravelOAuth {
 
 use Illuminate\Config\Repository;
 use Illuminate\Routing\UrlGenerator;
@@ -76,7 +76,7 @@ class OAuthSpec extends ObjectBehavior
     function it_creates_a_consumer_service(Repository $config)
     {
         $this->setupConfigurationExpectations($config);
-        $foo = $this->consumer('Foo');
+        $foo = $this->make('Foo');
         $foo->shouldHaveType('OAuth\\Common\\Service\\ServiceInterface');
         $foo->shouldHaveType('LaravelOAuth\\Decorators\\AbstractServiceDecorator');
     }
@@ -84,11 +84,11 @@ class OAuthSpec extends ObjectBehavior
     function it_decorates_with_dedicated_decorator_if_one_is_available(Repository $config)
     {
         $this->setupConfigurationExpectations($config);
-        $fenix = $this->consumer('FenixEdu');
+        $fenix = $this->make('Foo');
         $fenix->shouldHaveType('OAuth\\Common\\Service\\ServiceInterface');
         $fenix->shouldHaveType('LaravelOAuth\\Decorators\\AbstractServiceDecorator');
         $fenix->shouldHaveType('LaravelOAuth\\Decorators\\OAuth2\\BaseServiceDecorator');
-        $fenix->shouldHaveType('LaravelOAuth\\Decorators\\OAuth2\\FenixEduDecorator');
+        $fenix->shouldHaveType('LaravelOAuth\\Decorators\\OAuth2\\FooDecorator');
     }
 
     function setupConfigurationExpectations(Repository $config, $service = 'Foo', array $override = [])
@@ -116,10 +116,6 @@ class OAuthSpec extends ObjectBehavior
     }
 }
 
-use OAuth\Common\Http\Exception\TokenResponseException;
-use OAuth\Common\Http\Uri\UriInterface;
-use OAuth\Common\Token\TokenInterface;
-
 class Foo implements ServiceInterface {
 
     public function request($path, $method = 'GET', $body = null, array $extraHeaders = array())
@@ -142,4 +138,19 @@ class Foo implements ServiceInterface {
     {
         return 2;
     }
+
+    public function service()
+    {
+        return 'Foo';
+    }
+
+    public function requestAccessToken($code)
+    {
+    }
+}
+
+}
+
+namespace LaravelOAuth\Decorators\OAuth2 {
+    class FooDecorator extends BaseServiceDecorator {}
 }
