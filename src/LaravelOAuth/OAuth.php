@@ -210,10 +210,10 @@ class OAuth
     private function decorateService(ServiceInterface $service, $decorator)
     {
         if (!empty($decorator))
-        { var_dump("\n\n\nWE HAVE A PARAM DECORATOR \n\n\n");
+        {
             $this->validateDecoratorClass($decorator);
         }
-        elseif ($this->_decorator) { var_dump("\n\n\nWE HAVE A CONFIG DECORATOR \n\n\n");
+        elseif ($this->_decorator) {
             $decorator = $this->_decorator;
             $this->validateDecoratorClass($decorator);
         }
