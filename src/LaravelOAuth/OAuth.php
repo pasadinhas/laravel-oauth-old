@@ -88,13 +88,7 @@ class OAuth
      */
     public function loadConfiguration($service)
     {
-        if ($this->config->has('laravel-oauth.consumers')) {
-            $prefix = 'laravel-oauth.';
-        }
-        else
-        {
-            $prefix = 'laravel-oauth::';
-        }
+        $prefix = $this->getConfigurationPrefix();
 
         $this->_storage_name        = $this->config->get("{$prefix}storage", 'Session');
         $this->_decorator_namespace = $this->config->get("{$prefix}decorators_namespace", null);
@@ -114,8 +108,14 @@ class OAuth
      * @throws Exceptions\StorageClassDoesNotExistException
      * @return TokenStorageInterface
      */
-    public function createStorageInstance($storageName)
+    public function makeStorage($storageName = null)
     {
+        if ( ! $storageName )
+        {
+            $prefix = $this->getConfigurationPrefix();
+            $storageName = $this->config->get("{$prefix}storage", 'Session');
+        }
+
         $storageClass = "\\OAuth\\Common\\Storage\\$storageName";
 
         if (!class_exists($storageClass)) throw new StorageClassDoesNotExistException();
@@ -128,7 +128,7 @@ class OAuth
      *
      * @return Credentials
      */
-    private function createCredentialsInstance($url)
+    private function makeCredentials($url)
     {
         $url = $url ?: $this->_url ?: $this->url->current();
         return new Credentials($this->_client_id, $this->_client_secret, $url);
@@ -191,9 +191,9 @@ class OAuth
      */
     private function createServiceDependencies($url, $scope)
     {
-        $storage = $this->createStorageInstance($this->_storage_name);
+        $storage = $this->makeStorage($this->_storage_name);
 
-        $credentials = $this->createCredentialsInstance($url);
+        $credentials = $this->makeCredentials($url);
 
         $scope = $scope ? : $this->_scope;
 
@@ -265,5 +265,19 @@ class OAuth
         $class = "{$path}\\{$name}Decorator";
 
         return class_exists($class) ? $class : false;
+    }
+
+    /**
+     * @return string
+     */
+    private function getConfigurationPrefix()
+    {
+        if ($this->config->has('laravel-oauth.consumers')) {
+            $prefix = 'laravel-oauth.';
+            return $prefix;
+        } else {
+            $prefix = 'laravel-oauth::';
+            return $prefix;
+        }
     }
 }

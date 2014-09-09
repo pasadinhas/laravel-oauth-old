@@ -27,32 +27,32 @@ class OAuthSpec extends ObjectBehavior
 
     function it_creates_a_session_storage()
     {
-        $storage = $this->createStorageInstance('Session');
+        $storage = $this->makeStorage('Session');
         $storage->shouldHaveType('OAuth\Common\Storage\Session');
     }
 
     function it_creates_a_memory_storage()
     {
-        $storage = $this->createStorageInstance('Memory');
+        $storage = $this->makeStorage('Memory');
         $storage->shouldHaveType('OAuth\Common\Storage\Memory');
     }
 
     function it_creates_a_symfony_session_storage()
     {
-        $storage = $this->createStorageInstance('SymfonySession');
+        $storage = $this->makeStorage('SymfonySession');
         $storage->shouldHaveType('OAuth\Common\Storage\SymfonySession');
     }
 
     function it_creates_a_redis_storage()
     {
-        $storage = $this->createStorageInstance('Redis');
+        $storage = $this->makeStorage('Redis');
         $storage->shouldHaveType('OAuth\Common\Storage\Redis');
     }
 
     function it_throws_a_storage_class_does_not_exist_exception_when_the_given_storage_does_not_exist()
     {
         $this->shouldThrow('LaravelOAuth\\Exceptions\\StorageClassDoesNotExistException')
-            ->duringCreateStorageInstance('Foobar');
+            ->duringMakeStorage('Foobar');
     }
 
     function it_sets_the_curl_http_client(ServiceFactory $serviceFactory)
