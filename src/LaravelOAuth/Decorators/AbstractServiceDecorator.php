@@ -24,7 +24,11 @@ abstract class AbstractServiceDecorator implements ServiceInterface
     {
         $this->service = $service;
         $this->refresh = $refresh;
-        $this->bootstrap();
+
+        if (method_exists($this, 'bootstrap'))
+        {
+            $this->bootstrap();
+        }
     }
 
     /**
@@ -51,7 +55,7 @@ abstract class AbstractServiceDecorator implements ServiceInterface
      */
     public function getAuthorizationUri(array $additionalParameters = array())
     {
-        return $this->entity->getAuthorizationUri($additionalParameters);
+        return $this->service->getAuthorizationUri($additionalParameters);
     }
 
     /**
