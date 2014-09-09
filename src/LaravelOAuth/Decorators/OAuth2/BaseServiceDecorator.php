@@ -27,7 +27,7 @@ class BaseServiceDecorator extends AbstractServiceDecorator implements ServiceIn
     public function request($path, $method = 'GET', $body = null, array $extraHeaders = array())
     {
         try {
-            $this->service->request($path, $method, $body, $extraHeaders);
+            return $this->service->request($path, $method, $body, $extraHeaders);
         } catch(ExpiredTokenException $e) {
             if ($this->refresh) {
                 // FIXME refresh access token
