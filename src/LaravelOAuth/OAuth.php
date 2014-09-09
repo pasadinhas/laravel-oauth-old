@@ -64,6 +64,9 @@ class OAuth
      */
     private $url;
 
+    private $_decorator;
+    private $_decorator_namespace;
+
     /**
      * Constructor
      *
@@ -93,12 +96,14 @@ class OAuth
             $prefix = 'laravel-oauth::';
         }
 
-        $this->_storage_name  = $this->config->get("{$prefix}storage", 'Session');
-        $this->_client_id     = $this->config->get("{$prefix}consumers.$service.client_id");
-        $this->_client_secret = $this->config->get("{$prefix}consumers.$service.client_secret");
-        $this->_scope         = $this->config->get("{$prefix}consumers.$service.scope", array());
-        $this->_url           = $this->config->get("{$prefix}consumers.$service.redirect_url", null);
-        $this->_refresh       = $this->config->get("{$prefix}consumers.$service.automatic_refresh", false);
+        $this->_storage_name        = $this->config->get("{$prefix}storage", 'Session');
+        $this->_decorator_namespace = $this->config->get("{$prefix}decorators_namespace", null);
+        $this->_client_id           = $this->config->get("{$prefix}consumers.$service.client_id");
+        $this->_client_secret       = $this->config->get("{$prefix}consumers.$service.client_secret");
+        $this->_scope               = $this->config->get("{$prefix}consumers.$service.scope", array());
+        $this->_url                 = $this->config->get("{$prefix}consumers.$service.redirect_url", null);
+        $this->_refresh             = $this->config->get("{$prefix}consumers.$service.automatic_refresh", false);
+        $this->_decorator           = $this->config->get("{$prefix}consumers.$service.decorator", null);
     }
 
     /**
@@ -205,21 +210,30 @@ class OAuth
     private function decorateService(ServiceInterface $service, $decorator)
     {
         if (!empty($decorator))
-        {
-            if (!class_exists($decorator))
-                throw new DecoratorClassDoesNotExistException("Decorator Class [$decorator] does not exist.");
-
-            $class = $decorator;
+        { var_dump("\n\n\nWE HAVE A PARAM DECORATOR \n\n\n");
+            $this->validateDecoratorClass($decorator);
+        }
+        elseif ($this->_decorator) { var_dump("\n\n\nWE HAVE A CONFIG DECORATOR \n\n\n");
+            $decorator = $this->_decorator;
+            $this->validateDecoratorClass($decorator);
         }
         else
         {
-            $class = $this->getDecoratorClassNameForService($service);
+            if ($this->_decorator_namespace)
+            {
+                $decorator = $this->getUserDecoratorClassNameForService($this->_decorator_namespace, $service) ?:
+                    $this->getDefaultDecoratorClassNameForService($service);
+            }
+            else
+            {
+                $decorator = $this->getDefaultDecoratorClassNameForService($service);
+            }
         }
 
-        return new $class($service, $this->_refresh);
+        return new $decorator($service, $this->_refresh);
     }
 
-    private function getDecoratorClassNameForService(ServiceInterface $service)
+    private function getDefaultDecoratorClassNameForService(ServiceInterface $service)
     {
         $version = $service->getOAuthVersion();
         $name = $service->service();
@@ -234,4 +248,22 @@ class OAuth
         return "LaravelOAuth\\Decorators\\OAuth{$version}\\BaseServiceDecorator";
     }
 
+    /**
+     * @param $decorator
+     *
+     * @throws Decorators\Exceptions\DecoratorClassDoesNotExistException
+     */
+    private function validateDecoratorClass($decorator)
+    {
+        if (!class_exists($decorator))
+            throw new DecoratorClassDoesNotExistException("Decorator Class [$decorator] does not exist.");
+    }
+
+    private function getUserDecoratorClassNameForService($path, $service)
+    {
+        $name = $service->service();
+        $class = "{$path}\\{$name}Decorator";
+
+        return class_exists($class) ? $class : false;
+    }
 }

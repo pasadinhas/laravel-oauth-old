@@ -104,9 +104,9 @@ class OAuthSpec extends ObjectBehavior
         $config->get("laravel-oauth.consumers.$service.redirect_url", null)->willReturn($stub['consumers'][$service]['redirect_url']);
         $config->get("laravel-oauth.consumers.$service.automatic_refresh", false)->willReturn($stub['consumers'][$service]['automatic_refresh']);
         */
-        $config->has(Argument::any())->willReturn(true);
-        $config->get(Argument::any())->willReturn('Session');
-        $config->get(Argument::any(), Argument::any())->willReturn('Session');
+        $config->has(Argument::any())->willReturn(false);
+        $config->get(Argument::any(), 'Session')->willReturn('Session');
+        $config->get(Argument::any(), Argument::any())->willReturn(null);
 
     }
 
