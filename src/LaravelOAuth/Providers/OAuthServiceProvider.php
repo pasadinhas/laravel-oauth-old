@@ -1,6 +1,7 @@
-<?php namespace LaravelOAuth;
+<?php namespace LaravelOAuth\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use LaravelOAuth\Factory;
 use OAuth\ServiceFactory;
 
 class OAuthServiceProvider extends ServiceProvider {
@@ -29,14 +30,8 @@ class OAuthServiceProvider extends ServiceProvider {
      */
     public function register()
     {
-        // Register 'oauth'
-        $this->app['oauth'] = $this->app->share(function ($app) {
-            return new OAuth(
-                new ServiceFactory(),
-                $this->app['config'],
-                $this->app['url']
-            );
-        });
+        $this->registerOAuth();
+        $this->registerCustomServices();
     }
 
     /**
@@ -49,4 +44,15 @@ class OAuthServiceProvider extends ServiceProvider {
         return array();
     }
 
+    private function registerOAuth()
+    {
+        $this->app['oauth'] = $this->app->share(function ($app) {
+            return new Factory(new ServiceFactory(), $this->app['config'], $this->app['url']);
+        });
+    }
+
+    private function registerCustomServices()
+    {
+        $this->app['oauth']->registerServices();
+    }
 }
